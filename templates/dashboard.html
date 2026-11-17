@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Compliance Checker</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- ===== HEADER ===== -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div>
+                <h1>Network Compliance Checker</h1>
+                <p class="subtitle">Switch Hardening & Configuration Audit Dashboard</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <span class="mode-badge {{ mode }}">{{ mode | upper }} MODE</span>
+            <span class="timestamp" id="lastUpdated">—</span>
+        </div>
+    </header>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="main">
+        <!-- Action Bar -->
+        <div class="action-bar">
+            <button class="btn btn-primary btn-lg" id="btnRunAudit" onclick="runAudit()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                Run Compliance Audit
+            </button>
+            <div class="download-group" id="downloadGroup" style="display:none;">
+                <button class="btn btn-outline" onclick="downloadReport('pdf')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                    PDF Report
+                </button>
+                <button class="btn btn-outline" onclick="downloadReport('csv_summary')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                    CSV Summary
+                </button>
+                <button class="btn btn-outline" onclick="downloadReport('csv_detailed')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                    CSV Detailed
+                </button>
+            </div>
+        </div>
+
+        <!-- Progress Bar (shown during audit) -->
+        <div class="progress-container" id="progressContainer" style="display:none;">
+            <div class="progress-header">
+                <span id="progressLabel">Collecting configurations...</span>
+                <span id="progressCount">0 / 0</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width:0%"></div>
+            </div>
+            <p class="progress-detail" id="progressDetail">Initializing...</p>
+        </div>
+
+        <!-- ===== SUMMARY CARDS ===== -->
+        <div class="summary-grid" id="summaryGrid" style="display:none;">
+            <div class="card card-metric">
+                <div class="metric-icon blue">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2"/>
+                        <path d="M8 21h8M12 17v4"/>
+                    </svg>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-value" id="totalSwitches">0</span>
+                    <span class="metric-label">Total Switches</span>
+                </div>
+            </div>
+            <div class="card card-metric">
+                <div class="metric-icon green">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                        <path d="M22 4L12 14.01l-3-3"/>
+                    </svg>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-value" id="compliantCount">0</span>
+                    <span class="metric-label">Compliant</span>
+                </div>
+            </div>
+            <div class="card card-metric">
+                <div class="metric-icon amber">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-value" id="partialCount">0</span>
+                    <span class="metric-label">Partially Compliant</span>
+                </div>
+            </div>
+            <div class="card card-metric">
+                <div class="metric-icon red">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-value" id="nonCompliantCount">0</span>
+                    <span class="metric-label">Non-Compliant</span>
+                </div>
+            </div>
+            <div class="card card-metric">
+                <div class="metric-icon gray">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                        <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-value" id="unreachableCount">0</span>
+                    <span class="metric-label">Unreachable</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== OVERALL COMPLIANCE GAUGE ===== -->
+        <div class="gauge-row" id="gaugeRow" style="display:none;">
+            <div class="card gauge-card">
+                <h3>Overall Compliance</h3>
+                <div class="gauge-container">
+                    <svg class="gauge" viewBox="0 0 200 120">
+                        <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#E2E8F0" stroke-width="16" stroke-linecap="round"/>
+                        <path id="gaugeArc" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#059669" stroke-width="16" stroke-linecap="round" stroke-dasharray="0 999"/>
+                    </svg>
+                    <div class="gauge-value" id="gaugeValue">0%</div>
+                </div>
+            </div>
+            <div class="card severity-card">
+                <h3>Findings by Severity</h3>
+                <div class="severity-bars">
+                    <div class="severity-row">
+                        <span class="severity-label critical">CRITICAL</span>
+                        <div class="severity-bar-bg"><div class="severity-bar-fill critical" id="sevCritical" style="width:0%"></div></div>
+                        <span class="severity-count" id="sevCriticalCount">0</span>
+                    </div>
+                    <div class="severity-row">
+                        <span class="severity-label high">HIGH</span>
+                        <div class="severity-bar-bg"><div class="severity-bar-fill high" id="sevHigh" style="width:0%"></div></div>
+                        <span class="severity-count" id="sevHighCount">0</span>
+                    </div>
+                    <div class="severity-row">
+                        <span class="severity-label medium">MEDIUM</span>
+                        <div class="severity-bar-bg"><div class="severity-bar-fill medium" id="sevMedium" style="width:0%"></div></div>
+                        <span class="severity-count" id="sevMediumCount">0</span>
+                    </div>
+                    <div class="severity-row">
+                        <span class="severity-label low">LOW</span>
+                        <div class="severity-bar-bg"><div class="severity-bar-fill low" id="sevLow" style="width:0%"></div></div>
+                        <span class="severity-count" id="sevLowCount">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card region-card">
+                <h3>Compliance by Region</h3>
+                <div class="region-list" id="regionList">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== CATEGORY COMPLIANCE ===== -->
+        <div class="card" id="categoryCard" style="display:none;">
+            <h3>Compliance by Category</h3>
+            <div class="category-grid" id="categoryGrid">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <!-- ===== TOP NON-COMPLIANT RULES ===== -->
+        <div class="card" id="topRulesCard" style="display:none;">
+            <h3>Top Non-Compliant Rules</h3>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Rule ID</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Severity</th>
+                            <th>Failing Switches</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topRulesBody">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ===== SWITCH TABLE ===== -->
+        <div class="card" id="switchTableCard" style="display:none;">
+            <div class="card-header">
+                <h3>Switch Compliance Details</h3>
+                <div class="filter-group">
+                    <input type="text" id="searchInput" placeholder="Search switches..." class="search-input" oninput="filterSwitchTable()">
+                    <select id="statusFilter" class="filter-select" onchange="filterSwitchTable()">
+                        <option value="all">All Statuses</option>
+                        <option value="compliant">Compliant</option>
+                        <option value="partially_compliant">Partially Compliant</option>
+                        <option value="non_compliant">Non-Compliant</option>
+                        <option value="unreachable">Unreachable</option>
+                    </select>
+                    <select id="regionFilter" class="filter-select" onchange="filterSwitchTable()">
+                        <option value="all">All Regions</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table" id="switchTable">
+                    <thead>
+                        <tr>
+                            <th>Switch Name</th>
+                            <th>Hostname</th>
+                            <th>Region</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                            <th>Compliance</th>
+                            <th>Critical</th>
+                            <th>High</th>
+                            <th>Medium</th>
+                            <th>Low</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="switchTableBody">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ===== SWITCH DETAIL MODAL ===== -->
+        <div class="modal-overlay" id="modalOverlay" style="display:none;" onclick="closeModal()">
+            <div class="modal" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Switch Details</h3>
+                    <button class="btn-close" onclick="closeModal()">✕</button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== INITIAL STATE ===== -->
+        <div class="empty-state" id="emptyState">
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="1.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h2>Ready to Audit</h2>
+            <p>Click <strong>"Run Compliance Audit"</strong> to connect to all switches,<br>
+               pull running configs, and check them against the golden template.</p>
+            <div class="empty-stats" id="emptyStats">
+                <span>Loading inventory...</span>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Network Switch Compliance Checker • Hardening Standard Audit Tool</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

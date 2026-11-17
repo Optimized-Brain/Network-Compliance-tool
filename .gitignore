@@ -1,0 +1,29 @@
+# Python virtual environment
+venv/
+env/
+.venv/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Sensitive credentials & environment files
+.env
+config/credentials.yaml
+
+# Runtime logs
+logs/*.log
+*.log
+
+# Generated reports (PDF, CSV)
+reports/*.pdf
+reports/*.csv
+!reports/.gitkeep
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

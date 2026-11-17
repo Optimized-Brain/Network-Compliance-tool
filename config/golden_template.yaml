@@ -1,0 +1,769 @@
+# ============================================================================
+# GOLDEN TEMPLATE - Network Switch Compliance & Hardening Standards
+# ============================================================================
+# This template defines all compliance rules that switches are checked against.
+# Each rule has:
+#   - id: Unique identifier
+#   - description: What the rule checks
+#   - severity: critical / high / medium / low
+#   - category: Grouping for dashboard display
+#   - check_type: How to validate (regex_present, regex_absent, line_present,
+#                  line_absent, section_check, custom)
+#   - patterns: What to look for in running config
+#   - remediation: Fix instruction if non-compliant
+# ============================================================================
+
+metadata:
+  version: "2.0"
+  last_updated: "2024-11-17"
+  author: "Network Security Team"
+  standard: "Enterprise Network Hardening Standard v2.0"
+
+# ============================================================================
+# 1. AAA & AUTHENTICATION
+# ============================================================================
+categories:
+  - name: "AAA & Authentication"
+    id: aaa
+    rules:
+      - id: AAA-001
+        description: "AAA new-model must be enabled"
+        severity: critical
+        check_type: regex_present
+        patterns:
+          - "^aaa new-model$"
+        remediation: "Configure 'aaa new-model' in global configuration"
+
+      - id: AAA-002
+        description: "TACACS+ server must be configured"
+        severity: critical
+        check_type: regex_present
+        patterns:
+          - "^tacacs server \\S+|^tacacs-server host \\S+"
+        remediation: "Configure TACACS+ server: 'tacacs server <name>' with server address and key"
+
+      - id: AAA-003
+        description: "AAA authentication for login must use TACACS+"
+        severity: critical
+        check_type: regex_present
+        patterns:
+          - "^aaa authentication login .+ group tacacs\\+"
+        remediation: "Configure 'aaa authentication login default group tacacs+ local'"
+
+      - id: AAA-004
+        description: "AAA authentication for enable must use TACACS+"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^aaa authentication enable .+ group tacacs\\+"
+        remediation: "Configure 'aaa authentication enable default group tacacs+ enable'"
+
+      - id: AAA-005
+        description: "AAA authorization for exec must be configured"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^aaa authorization exec .+ group tacacs\\+"
+        remediation: "Configure 'aaa authorization exec default group tacacs+ local'"
+
+      - id: AAA-006
+        description: "AAA authorization for commands must be configured"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^aaa authorization commands 15 .+ group tacacs\\+"
+        remediation: "Configure 'aaa authorization commands 15 default group tacacs+ local'"
+
+      - id: AAA-007
+        description: "AAA accounting for exec must be configured"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^aaa accounting exec .+ start-stop group tacacs\\+"
+        remediation: "Configure 'aaa accounting exec default start-stop group tacacs+'"
+
+      - id: AAA-008
+        description: "AAA accounting for commands must be configured"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^aaa accounting commands 15 .+ start-stop group tacacs\\+"
+        remediation: "Configure 'aaa accounting commands 15 default start-stop group tacacs+'"
+
+      - id: AAA-009
+        description: "Local fallback user account must exist"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^username \\S+ privilege 15 secret"
+        remediation: "Configure a local fallback admin: 'username admin privilege 15 secret <password>'"
+
+  # ============================================================================
+  # 2. SSH HARDENING
+  # ============================================================================
+  - name: "SSH Hardening"
+    id: ssh
+    rules:
+      - id: SSH-001
+        description: "SSH version 2 must be enforced"
+        severity: critical
+        check_type: regex_present
+        patterns:
+          - "^ip ssh version 2$"
+        remediation: "Configure 'ip ssh version 2'"
+
+      - id: SSH-002
+        description: "SSH timeout must be configured (60 seconds or less)"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^ip ssh time-out [1-6]?[0-9]$"
+        remediation: "Configure 'ip ssh time-out 60'"
+
+      - id: SSH-003
+        description: "SSH authentication retries must be limited (3 or less)"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^ip ssh authentication-retries [1-3]$"
+        remediation: "Configure 'ip ssh authentication-retries 3'"
+
+      - id: SSH-004
+        description: "Telnet must be disabled on VTY lines"
+        severity: critical
+        check_type: regex_present
+        patterns:
+          - "transport input ssh"
+        remediation: "Under all VTY lines, configure 'transport input ssh'"
+
+      - id: SSH-005
+        description: "RSA key size must be 2048 bits or higher"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^crypto key generate rsa.*modulus (2048|3072|4096)|^ip ssh rsa keypair-name"
+        remediation: "Generate RSA keys: 'crypto key generate rsa modulus 2048'"
+
+  # ============================================================================
+  # 3. CONSOLE & VTY LINE SECURITY
+  # ============================================================================
+  - name: "Console & VTY Line Security"
+    id: line_security
+    rules:
+      - id: LINE-001
+        description: "Console line must have exec-timeout configured"
+        severity: high
+        check_type: section_check
+        section_start: "^line con 0"
+        section_end: "^line |^!"
+        patterns:
+          - "exec-timeout [0-9]+ [0-9]+"
+        remediation: "Under 'line con 0', configure 'exec-timeout 5 0'"
+
+      - id: LINE-002
+        description: "Console logging must be synchronous"
+        severity: low
+        check_type: section_check
+        section_start: "^line con 0"
+        section_end: "^line |^!"
+        patterns:
+          - "logging synchronous"
+        remediation: "Under 'line con 0', configure 'logging synchronous'"
+
+      - id: LINE-003
+        description: "VTY lines must have exec-timeout configured"
+        severity: high
+        check_type: section_check
+        section_start: "^line vty"
+        section_end: "^line |^!"
+        patterns:
+          - "exec-timeout [0-9]+ [0-9]+"
+        remediation: "Under 'line vty 0 15', configure 'exec-timeout 10 0'"
+
+      - id: LINE-004
+        description: "VTY lines must have ACL applied"
+        severity: critical
+        check_type: section_check
+        section_start: "^line vty"
+        section_end: "^line |^!"
+        patterns:
+          - "access-class \\S+ in"
+        remediation: "Under 'line vty 0 15', configure 'access-class VTY-ACL in'"
+
+      - id: LINE-005
+        description: "AUX port must be disabled"
+        severity: high
+        check_type: section_check
+        section_start: "^line aux 0"
+        section_end: "^line |^!"
+        patterns:
+          - "no exec|transport input none"
+        remediation: "Under 'line aux 0', configure 'no exec' and 'transport input none'"
+
+  # ============================================================================
+  # 4. SNMP SECURITY
+  # ============================================================================
+  - name: "SNMP Security"
+    id: snmp
+    rules:
+      - id: SNMP-001
+        description: "SNMPv3 must be configured"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^snmp-server group \\S+ v3 (priv|auth)"
+        remediation: "Configure SNMPv3: 'snmp-server group <name> v3 priv'"
+
+      - id: SNMP-002
+        description: "SNMP community string 'public' must not exist"
+        severity: critical
+        check_type: regex_absent
+        patterns:
+          - "^snmp-server community public"
+        remediation: "Remove: 'no snmp-server community public'"
+
+      - id: SNMP-003
+        description: "SNMP community string 'private' must not exist"
+        severity: critical
+        check_type: regex_absent
+        patterns:
+          - "^snmp-server community private"
+        remediation: "Remove: 'no snmp-server community private'"
+
+      - id: SNMP-004
+        description: "SNMP community strings must have ACL restrictions"
+        severity: high
+        check_type: custom
+        custom_check: snmp_community_acl
+        remediation: "All SNMP communities must have ACL: 'snmp-server community <string> RO <ACL>'"
+
+      - id: SNMP-005
+        description: "SNMP traps must be configured"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^snmp-server enable traps"
+        remediation: "Configure 'snmp-server enable traps' and 'snmp-server host <ip> version 3 priv <user>'"
+
+  # ============================================================================
+  # 5. LOGGING & MONITORING
+  # ============================================================================
+  - name: "Logging & Monitoring"
+    id: logging
+    rules:
+      - id: LOG-001
+        description: "Remote syslog server must be configured"
+        severity: critical
+        check_type: regex_present
+        patterns:
+          - "^logging host \\S+|^logging server \\S+"
+        remediation: "Configure 'logging host <syslog-server-ip>'"
+
+      - id: LOG-002
+        description: "Logging buffer must be configured"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^logging buffered"
+        remediation: "Configure 'logging buffered 65536 informational'"
+
+      - id: LOG-003
+        description: "Logging timestamps must include datetime with msec"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^service timestamps log datetime msec"
+        remediation: "Configure 'service timestamps log datetime msec localtime show-timezone'"
+
+      - id: LOG-004
+        description: "Logging console level must be set"
+        severity: low
+        check_type: regex_present
+        patterns:
+          - "^logging console (critical|alerts|emergencies|errors|warnings)"
+        remediation: "Configure 'logging console critical'"
+
+      - id: LOG-005
+        description: "Logging source interface must be configured"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^logging source-interface"
+        remediation: "Configure 'logging source-interface Loopback0'"
+
+  # ============================================================================
+  # 6. NTP CONFIGURATION
+  # ============================================================================
+  - name: "NTP Configuration"
+    id: ntp
+    rules:
+      - id: NTP-001
+        description: "NTP server must be configured"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^ntp server \\S+"
+        remediation: "Configure 'ntp server <ntp-server-ip>'"
+
+      - id: NTP-002
+        description: "NTP authentication must be enabled"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^ntp authenticate$"
+        remediation: "Configure 'ntp authenticate' with 'ntp authentication-key' and 'ntp trusted-key'"
+
+      - id: NTP-003
+        description: "NTP source interface must be configured"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^ntp source"
+        remediation: "Configure 'ntp source Loopback0'"
+
+  # ============================================================================
+  # 7. BANNER CONFIGURATION
+  # ============================================================================
+  - name: "Banner Configuration"
+    id: banner
+    rules:
+      - id: BAN-001
+        description: "Login banner must be configured"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^banner login"
+        remediation: "Configure 'banner login ^ Authorized access only. All activity is monitored and logged. ^'"
+
+      - id: BAN-002
+        description: "MOTD banner must be configured"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^banner motd"
+        remediation: "Configure 'banner motd ^ Unauthorized access is prohibited. ^'"
+
+      - id: BAN-003
+        description: "Exec banner must be configured"
+        severity: low
+        check_type: regex_present
+        patterns:
+          - "^banner exec"
+        remediation: "Configure 'banner exec ^ This system is for authorized use only. ^'"
+
+  # ============================================================================
+  # 8. NAC - NETWORK ACCESS CONTROL (802.1X)
+  # ============================================================================
+  - name: "NAC / 802.1X Configuration"
+    id: nac
+    rules:
+      - id: NAC-001
+        description: "AAA authentication for dot1x must be configured"
+        severity: critical
+        check_type: regex_present
+        patterns:
+          - "^aaa authentication dot1x"
+        remediation: "Configure 'aaa authentication dot1x default group radius'"
+
+      - id: NAC-002
+        description: "AAA authorization for network must be configured"
+        severity: critical
+        check_type: regex_present
+        patterns:
+          - "^aaa authorization network"
+        remediation: "Configure 'aaa authorization network default group radius'"
+
+      - id: NAC-003
+        description: "Dot1x system-auth-control must be enabled"
+        severity: critical
+        check_type: regex_present
+        patterns:
+          - "^dot1x system-auth-control$"
+        remediation: "Configure 'dot1x system-auth-control'"
+
+      - id: NAC-004
+        description: "RADIUS server must be configured"
+        severity: critical
+        check_type: regex_present
+        patterns:
+          - "^radius server \\S+|^radius-server host \\S+"
+        remediation: "Configure RADIUS server: 'radius server <name>' with address and key"
+
+      - id: NAC-005
+        description: "RADIUS dead criteria must be configured"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^radius-server dead-criteria"
+        remediation: "Configure 'radius-server dead-criteria time 10 tries 3'"
+
+      - id: NAC-006
+        description: "RADIUS deadtime must be configured"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^radius-server deadtime"
+        remediation: "Configure 'radius-server deadtime 15'"
+
+      - id: NAC-007
+        description: "Authentication host-mode must be multi-auth or multi-domain"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "authentication host-mode multi-(auth|domain)"
+        remediation: "Configure 'authentication host-mode multi-auth' on access ports"
+
+      - id: NAC-008
+        description: "Authentication order must be configured (dot1x mab)"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "authentication order dot1x mab"
+        remediation: "Configure 'authentication order dot1x mab' on access ports"
+
+      - id: NAC-009
+        description: "Authentication priority must be configured"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "authentication priority dot1x mab"
+        remediation: "Configure 'authentication priority dot1x mab' on access ports"
+
+      - id: NAC-010
+        description: "MAB (MAC Authentication Bypass) must be enabled"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^mab$"
+        remediation: "Configure 'mab' on access ports for non-dot1x capable devices"
+
+      - id: NAC-011
+        description: "Authentication violation mode must be restrict or protect"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "authentication violation (restrict|protect)"
+        remediation: "Configure 'authentication violation restrict' on access ports"
+
+      - id: NAC-012
+        description: "Authentication periodic re-auth must be enabled"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "authentication periodic"
+        remediation: "Configure 'authentication periodic' and 'authentication timer reauthenticate server' on access ports"
+
+  # ============================================================================
+  # 9. PORT SECURITY & LAYER 2 HARDENING
+  # ============================================================================
+  - name: "Port Security & L2 Hardening"
+    id: port_security
+    rules:
+      - id: PS-001
+        description: "DHCP snooping must be enabled globally"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^ip dhcp snooping$"
+        remediation: "Configure 'ip dhcp snooping' and 'ip dhcp snooping vlan <vlans>'"
+
+      - id: PS-002
+        description: "DHCP snooping must be enabled on VLANs"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^ip dhcp snooping vlan"
+        remediation: "Configure 'ip dhcp snooping vlan <vlan-range>'"
+
+      - id: PS-003
+        description: "Dynamic ARP Inspection (DAI) must be enabled"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^ip arp inspection vlan"
+        remediation: "Configure 'ip arp inspection vlan <vlan-range>'"
+
+      - id: PS-004
+        description: "IP Source Guard should be configured on access ports"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "ip verify source"
+        remediation: "Configure 'ip verify source' on access ports"
+
+      - id: PS-005
+        description: "Storm control must be configured on access ports"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "storm-control broadcast level"
+        remediation: "Configure 'storm-control broadcast level 20.00' on access ports"
+
+      - id: PS-006
+        description: "BPDU Guard must be enabled"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "spanning-tree bpduguard enable|spanning-tree portfast bpduguard default"
+        remediation: "Configure 'spanning-tree portfast bpduguard default' globally"
+
+      - id: PS-007
+        description: "Root Guard must be enabled on appropriate ports"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "spanning-tree guard root"
+        remediation: "Configure 'spanning-tree guard root' on distribution ports"
+
+      - id: PS-008
+        description: "PortFast must be enabled on access ports"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "spanning-tree portfast$|spanning-tree portfast default"
+        remediation: "Configure 'spanning-tree portfast default' globally or per-port"
+
+      - id: PS-009
+        description: "Unused ports must be shut down"
+        severity: high
+        check_type: custom
+        custom_check: unused_ports_shutdown
+        remediation: "Shutdown all unused ports and assign them to a black-hole VLAN"
+
+  # ============================================================================
+  # 10. ROUTING PROTOCOL SECURITY
+  # ============================================================================
+  - name: "Routing Protocol Security"
+    id: routing
+    rules:
+      - id: RTG-001
+        description: "EIGRP authentication must be configured (if EIGRP is used)"
+        severity: high
+        check_type: conditional_present
+        condition_patterns:
+          - "^router eigrp"
+        patterns:
+          - "ip authentication mode eigrp .+ md5|ip authentication key-chain eigrp"
+        remediation: "Configure EIGRP MD5 authentication on all EIGRP interfaces"
+
+      - id: RTG-002
+        description: "OSPF authentication must be configured (if OSPF is used)"
+        severity: high
+        check_type: conditional_present
+        condition_patterns:
+          - "^router ospf"
+        patterns:
+          - "ip ospf authentication message-digest|ip ospf message-digest-key"
+        remediation: "Configure OSPF MD5 authentication: 'ip ospf authentication message-digest'"
+
+      - id: RTG-003
+        description: "BGP authentication must be configured (if BGP is used)"
+        severity: high
+        check_type: conditional_present
+        condition_patterns:
+          - "^router bgp"
+        patterns:
+          - "neighbor .+ password"
+        remediation: "Configure BGP neighbor password authentication"
+
+      - id: RTG-004
+        description: "No static default route without authentication"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^ip route 0\\.0\\.0\\.0 0\\.0\\.0\\.0 \\S+"
+        remediation: "Verify static routes are intentional and documented"
+
+  # ============================================================================
+  # 11. GENERAL HARDENING
+  # ============================================================================
+  - name: "General Hardening"
+    id: hardening
+    rules:
+      - id: HARD-001
+        description: "Password encryption must be enabled"
+        severity: critical
+        check_type: regex_present
+        patterns:
+          - "^service password-encryption$"
+        remediation: "Configure 'service password-encryption'"
+
+      - id: HARD-002
+        description: "Enable secret must be configured (not enable password)"
+        severity: critical
+        check_type: regex_present
+        patterns:
+          - "^enable secret"
+        remediation: "Configure 'enable secret <password>' (use type 9 scrypt)"
+
+      - id: HARD-003
+        description: "Enable password in cleartext must not exist"
+        severity: critical
+        check_type: regex_absent
+        patterns:
+          - "^enable password"
+        remediation: "Remove 'enable password' and use 'enable secret' instead"
+
+      - id: HARD-004
+        description: "HTTP server must be disabled"
+        severity: critical
+        check_type: regex_present
+        patterns:
+          - "^no ip http server$"
+        remediation: "Configure 'no ip http server'"
+
+      - id: HARD-005
+        description: "HTTPS server must be disabled (unless managed via WebUI)"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^no ip http secure-server$"
+        remediation: "Configure 'no ip http secure-server' (unless actively used for management)"
+
+      - id: HARD-006
+        description: "CDP must be disabled globally (or limited to needed interfaces)"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^no cdp run$"
+        remediation: "Configure 'no cdp run' globally or 'no cdp enable' per interface"
+
+      - id: HARD-007
+        description: "IP source routing must be disabled"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^no ip source-route$"
+        remediation: "Configure 'no ip source-route'"
+
+      - id: HARD-008
+        description: "IP finger service must be disabled"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^no ip finger$|^no service finger$"
+        remediation: "Configure 'no ip finger'"
+
+      - id: HARD-009
+        description: "TCP/UDP small servers must be disabled"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^no service tcp-small-servers$"
+        remediation: "Configure 'no service tcp-small-servers' and 'no service udp-small-servers'"
+
+      - id: HARD-010
+        description: "IP BOOTP server must be disabled"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^no ip bootp server$"
+        remediation: "Configure 'no ip bootp server'"
+
+      - id: HARD-011
+        description: "Service timestamps debug must be configured"
+        severity: low
+        check_type: regex_present
+        patterns:
+          - "^service timestamps debug datetime msec"
+        remediation: "Configure 'service timestamps debug datetime msec localtime show-timezone'"
+
+      - id: HARD-012
+        description: "IP domain lookup must be disabled (unless DNS is configured)"
+        severity: low
+        check_type: regex_present
+        patterns:
+          - "^no ip domain.lookup$"
+        remediation: "Configure 'no ip domain-lookup' to prevent accidental DNS lookups"
+
+      - id: HARD-013
+        description: "IP gratuitous ARP must be disabled"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^no ip gratuitous-arps$"
+        remediation: "Configure 'no ip gratuitous-arps'"
+
+      - id: HARD-014
+        description: "VLAN 1 must not be used for user/management traffic"
+        severity: high
+        check_type: regex_absent
+        patterns:
+          - "^interface Vlan1\\s*$\\s*ip address [0-9]"
+        remediation: "Migrate management to a dedicated VLAN, shutdown VLAN 1 interface"
+
+      - id: HARD-015
+        description: "Hostname must be configured"
+        severity: low
+        check_type: regex_present
+        patterns:
+          - "^hostname \\S+"
+        remediation: "Configure 'hostname <switch-name>'"
+
+      - id: HARD-016
+        description: "Domain name must be configured"
+        severity: low
+        check_type: regex_present
+        patterns:
+          - "^ip domain.name \\S+"
+        remediation: "Configure 'ip domain-name <company.com>'"
+
+  # ============================================================================
+  # 12. ACCESS CONTROL LISTS
+  # ============================================================================
+  - name: "Access Control Lists"
+    id: acl
+    rules:
+      - id: ACL-001
+        description: "VTY access control list must exist"
+        severity: critical
+        check_type: regex_present
+        patterns:
+          - "^ip access-list (standard|extended) VTY|^access-list .* permit .* log"
+        remediation: "Create an ACL to restrict VTY access to management subnets only"
+
+      - id: ACL-002
+        description: "SNMP access control list must exist"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^ip access-list standard SNMP|^access-list .+SNMP"
+        remediation: "Create an ACL to restrict SNMP access to NMS servers only"
+
+  # ============================================================================
+  # 13. MANAGEMENT PLANE
+  # ============================================================================
+  - name: "Management Plane"
+    id: mgmt
+    rules:
+      - id: MGMT-001
+        description: "Management interface/VLAN must be configured"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^interface (Vlan[2-9]|Vlan[1-9][0-9]+|Loopback)"
+        remediation: "Configure a dedicated management VLAN/SVI or Loopback interface"
+
+      - id: MGMT-002
+        description: "Control plane policing (CoPP) should be configured"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^control-plane|^service-policy input"
+        remediation: "Configure Control Plane Policing to protect the management plane"
+
+      - id: MGMT-003
+        description: "Login block-for must be configured (brute force protection)"
+        severity: high
+        check_type: regex_present
+        patterns:
+          - "^login block-for"
+        remediation: "Configure 'login block-for 120 attempts 3 within 60'"
+
+      - id: MGMT-004
+        description: "Login on-failure/on-success logging must be configured"
+        severity: medium
+        check_type: regex_present
+        patterns:
+          - "^login on-failure log|^login on-success log"
+        remediation: "Configure 'login on-failure log every 3' and 'login on-success log'"

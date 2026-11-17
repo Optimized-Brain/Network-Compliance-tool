@@ -1,0 +1,121 @@
+# ============================================================================
+# SWITCH INVENTORY - Network Compliance Checker
+# ============================================================================
+# Add all your switches here. Group them by region/zone for easy management.
+#
+# Supported device_type values (Netmiko):
+#   cisco_ios, cisco_nxos, cisco_xe, cisco_asa, arista_eos,
+#   juniper_junos, hp_procurve, hp_comware, dell_force10,
+#   huawei, alcatel_aos, extreme_exos, etc.
+#
+# Authentication priority:
+#   1. Per-switch credentials (if specified)
+#   2. Global defaults (below)
+# ============================================================================
+
+# --- Global Defaults --------------------------------------------------------
+global_defaults:
+  device_type: cisco_ios          # Default device type for all switches
+  username: admin                 # Default SSH username
+  password: "CHANGE_ME"          # Default SSH password (use env vars in prod)
+  secret: "CHANGE_ME"            # Default enable secret
+  port: 22                       # Default SSH port
+  timeout: 30                    # SSH connection timeout (seconds)
+  # bastion/jump host config (your RDP bastion server)
+  # Uncomment and configure if SSH goes through a jump host
+  # jump_host:
+  #   hostname: 10.0.0.1
+  #   username: bastion_user
+  #   password: "BASTION_PASS"
+  #   port: 22
+
+# --- Switch Inventory -------------------------------------------------------
+# Organize switches by region. Each switch needs at minimum:
+#   - hostname (IP or FQDN)
+#   - name (friendly display name)
+# Optional per-switch overrides: device_type, username, password, secret, port
+
+regions:
+  # ---- NORTH ZONE ----------------------------------------------------------
+  - region: "North Zone"
+    location: "Delhi NCR"
+    switches:
+      - name: "DELHI-CORE-SW01"
+        hostname: "10.1.1.1"
+        device_type: cisco_ios
+        # username: special_user     # Override default creds if needed
+        # password: "special_pass"
+
+      - name: "DELHI-DIST-SW01"
+        hostname: "10.1.1.2"
+        device_type: cisco_ios
+
+      - name: "DELHI-ACCESS-SW01"
+        hostname: "10.1.1.3"
+        device_type: cisco_ios
+
+  - region: "North Zone"
+    location: "Chandigarh"
+    switches:
+      - name: "CHD-CORE-SW01"
+        hostname: "10.2.1.1"
+        device_type: cisco_ios
+
+  # ---- SOUTH ZONE ----------------------------------------------------------
+  - region: "South Zone"
+    location: "Bangalore"
+    switches:
+      - name: "BLR-CORE-SW01"
+        hostname: "10.3.1.1"
+        device_type: cisco_ios
+
+      - name: "BLR-DIST-SW01"
+        hostname: "10.3.1.2"
+        device_type: cisco_ios
+
+  - region: "South Zone"
+    location: "Chennai"
+    switches:
+      - name: "CHN-CORE-SW01"
+        hostname: "10.4.1.1"
+        device_type: cisco_ios
+
+  # ---- WEST ZONE -----------------------------------------------------------
+  - region: "West Zone"
+    location: "Mumbai"
+    switches:
+      - name: "MUM-CORE-SW01"
+        hostname: "10.5.1.1"
+        device_type: cisco_ios
+
+      - name: "MUM-DIST-SW01"
+        hostname: "10.5.1.2"
+        device_type: cisco_ios
+
+  - region: "West Zone"
+    location: "Pune"
+    switches:
+      - name: "PUN-CORE-SW01"
+        hostname: "10.6.1.1"
+        device_type: cisco_ios
+
+  # ---- EAST ZONE -----------------------------------------------------------
+  - region: "East Zone"
+    location: "Kolkata"
+    switches:
+      - name: "KOL-CORE-SW01"
+        hostname: "10.7.1.1"
+        device_type: cisco_ios
+
+      - name: "KOL-ACCESS-SW01"
+        hostname: "10.7.1.2"
+        device_type: cisco_ios
+
+# ============================================================================
+# HOW TO ADD MORE SWITCHES:
+# ============================================================================
+# 1. Add a new region block or add switches under existing regions
+# 2. Each switch needs: name, hostname, device_type
+# 3. Use per-switch credentials only when different from global_defaults
+# 4. Ensure the bastion server can reach all switch IPs via SSH
+# ============================================================================
